@@ -4,25 +4,75 @@
 #include <vector>
 #include <ctime>
 #include <cstdlib>
+#include <algorithm>
+#include <sstream>
+#include <regex>
 
 std::unordered_map<std::string, std::vector<std::string>>responses = {
 	{"hi",{"Hello!", "Hi there!", "Hey!"}},
 	{"how are you?", {"I'm good,thanks for asking!", "I'm doing well,how about you?"}},
-	{"what's your name?", {"I'm ChatBot.", "I'm ChatBot,nice to meet you!"}},
+	{"i am fine", {"Nice to hear that!"}},
+	{"what is your name?", {"I'm ChatBot.", "I'm ChatBot,nice to meet you!"}},
+	{"math",{"Please write your Math question."}},
 	{"bye",{"Goodbye!", "See you later!", "Bye!"}}
 };
 
+bool caseInsensitiveStringCompare(const std::string& str1,const std::string& str2){
+    return std::equal(str1.begin(), str1.end(), str2.begin(), str2.end(), [](char c1, char c2) { return std::tolower(c1) == std::tolower(c2); });
+}
+
+double evaluate_expression(const std::string& expression){
+    std::isstringstream iss(expression);
+    std::stack<double> operands;
+    std::stack<char> operators;
+    
+    std::unordered_map<char, int> precedence = {
+        {'+', 1},
+        {'-', 1},
+        {'*', 2},
+        {'/', 2},
+        {'^', 3}
+    };
+    std::string token;
+    while(iss >> token){
+        if(isdigit(token[0]) || (token[0] == '-' && isdigit(token[1]))){
+            operands.push(std::stod(token));
+        }else if(token == "("){
+            operators.push('(');
+        }else if(token == ")"){
+            while(operators.top() != '('){
+                char op = operators.top();
+                operators.pop();
+                double operand2= operands.top();
+                operands.pop();
+                double operand1 = operands.top();
+                operands.pop();
+                
+                if(op == '+'){
+                    operands.push(operand1 + operand2);
+                }else if(op == '-'){
+                    operands.push(operand1 - operand2);
+                }else if(op == '*'){
+                    operands.push(operand1 * operand2);
+                }else if(op == '/'){
+                    operands.push(operand1 / operand2);
+                }
+            }
+        }
+    }
+}
+
 std::string get_response(const std::string& message){
-	std::string lower_message = message;
-	for(char& c : lower_message){
-		c = tolower(c);
-	}
 	for(const auto& pair : responses){
-		if(lower_message.find(pair.first) != std::string::npos){
-			const std::vector<std::string>& possible_responses = pair.second;
-			int index = rand() % possible_responses.size();
-			return possible_responses[index];
-		}
+	   if(caseInsensitiveStringCompare(message, pair.first)){
+	       const std::vector<std::string>& possible_responses = pair.second;
+	       if(!possible_responses.empty()){
+	             int index = rand() % possible_responses.size();
+	            return possible_responses[index];   
+	       }else{
+	           return "I'm sorry, I don't have a response for that.";
+	       }
+	   }
 	}
 	return "I'm sorry,I don't know what are you saying.";
 }
@@ -36,7 +86,7 @@ int main(){
 		std::cout << "You: ";
 		std::getline(std::cin, user_input);
 
-		if(user_input == "bye"){
+		if(user_input == "bye" || user_input == "Bye"){
 			std::cout << "ChatBot: " << get_response(user_input) << std::endl;
 			break;
 		}else{
