@@ -1,0 +1,48 @@
+#include <iostream>
+#include <string>
+#include <unordered_map>
+#include <vector>
+#include <ctime>
+#include <cstdlib>
+
+std::unordered_map<std::string, std::vector<std::string>>responses = {
+	{"hi",{"Hello!", "Hi there!", "Hey!"}},
+	{"how are you?", {"I'm good,thanks for asking!", "I'm doing well,how about you?"}},
+	{"what's your name?", {"I'm ChatBot.", "I'm ChatBot,nice to meet you!"}},
+	{"bye",{"Goodbye!", "See you later!", "Bye!"}}
+};
+
+std::string get_response(const std::string& message){
+	std::string lower_message = message;
+	for(char& c : lower_message){
+		c = tolower(c);
+	}
+	for(const auto& pair : responses){
+		if(lower_message.find(pair.first) != std::string::npos){
+			const std::vector<std::string>& possible_responses = pair.second;
+			int index = rand() % possible_responses.size();
+			return possible_responses[index];
+		}
+	}
+	return "I'm sorry,I don't know what are you saying.";
+}
+
+int main(){
+	srand(time(nullptr));
+	std::cout << "Welcome!Ask me anything or say bye to exit." << std::endl;
+
+	std::string user_input;
+	while(true){
+		std::cout << "You: ";
+		std::getline(std::cin, user_input);
+
+		if(user_input == "bye"){
+			std::cout << "ChatBot: " << get_response(user_input) << std::endl;
+			break;
+		}else{
+			std::cout << "ChatBot: " << get_response(user_input) << std::endl;
+		}
+	}
+
+	return 0;
+}
