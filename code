@@ -7,22 +7,30 @@
 #include <algorithm>
 #include <sstream>
 #include <regex>
+#include <cmath>
+#include <iomanip>
 
 std::unordered_map<std::string, std::vector<std::string>>responses = {
 	{"hi",{"Hello!", "Hi there!", "Hey!"}},
+	{"こんにちは",{"こんにちは！", "こんにちは～何でも聞かせて下さい！。"}},
 	{"how are you?", {"I'm good,thanks for asking!", "I'm doing well,how about you?"}},
+	{"お元気ですか？",{"元気です！","元気です！そっちはどうですか？"}},
 	{"i am fine", {"Nice to hear that!"}},
+	{"元気です",{"いいことですね！"}},
 	{"what is your name?", {"I'm ChatBot.", "I'm ChatBot,nice to meet you!"}},
-	{"math",{"Please write your Math question."}},
-	{"bye",{"Goodbye!", "See you later!", "Bye!"}}
+	{"名前はなんですか？",{"私はチャットボットです！","私はチャットボットです！よろしくね！"}},
+	{"can you do math?",{"Sure!Please write your Math question."}},
+	{"数学はできますか？",{"もちろんです！気軽に聴いてください！"}},
+	{"bye",{"Goodbye!", "See you later!", "Bye!"}},
+	{"さよなら",{"さよなら！","またねー","いってらっしゃーい。"}}
 };
 
 bool caseInsensitiveStringCompare(const std::string& str1,const std::string& str2){
     return std::equal(str1.begin(), str1.end(), str2.begin(), str2.end(), [](char c1, char c2) { return std::tolower(c1) == std::tolower(c2); });
 }
 
-double evaluate_expression(const std::string& expression){
-    std::isstringstream iss(expression);
+std::string evaluate_expression(const std::string& expression){
+    std::istringstream iss(expression);
     std::stack<double> operands;
     std::stack<char> operators;
     
@@ -56,23 +64,100 @@ double evaluate_expression(const std::string& expression){
                     operands.push(operand1 * operand2);
                 }else if(op == '/'){
                     operands.push(operand1 / operand2);
+                }else if(op == '^'){
+                    operands.push(std::pow(operand1,operand2));
                 }
             }
+            operators.pop();
+        }else{
+            while(!operators.empty() && precedence[operators.top()] >= precedence[token[0]]){
+                char op = operators.top();
+                operators.pop();
+                double operand2 = operands.top();
+                operands.pop();
+                double operand1 = operands.top();
+                operands.pop();
+                
+                if(op == '+'){
+                    operands.push(operand1 + operand2);
+                }else if(op == '-'){
+                    operands.push(operand1 - operand2);
+                }else if(op == '*'){
+                    operands.push(operand1 * operand2);
+                }else if(op == '/'){
+                    operands.push(operand1 / operand2);
+                }else if(op == '^'){
+                    operands.push(std::pow(operand1,operand2));
+                }
+            }
+            operators.push(token[0]);
         }
+    }
+    
+    while(!operators.empty()){
+        char op = operators.top();
+        operators.pop();
+        double operand2 = operands.top();
+        operands.pop();
+        double operand1 = operands.top();
+        operands.pop();
+        
+        if(op == '+'){
+            operands.push(operand1 + operand2);
+        }else if(op == '-'){
+            operands.push(operand1 - operand2);
+        }else if(op == '*'){
+            operands.push(operand1 * operand2);
+        }else if(op == '/'){
+            operands.push(operand1 / operand2);
+        }else if(op == '^'){
+            operands.push(std::pow(operand1,operand2));
+        }
+    }
+    
+    double result = operands.top();
+    if(std::floor(result) == result){
+        return std::to_string(static_cast<int>(result));
+    }else{
+        return std::to_string(result);
     }
 }
 
 std::string get_response(const std::string& message){
+    
+    std::regex pattern(R"([-+*/()\d. ]+)");
+    std::smatch match;
+    if(std::regex_match(message, match,pattern)){
+        try{
+            std::stringstream ss;
+            ss << std::fixed << std:: setprecision(2) << evaluate_expression(match[0]);
+            return ss.str();
+        }catch(...){
+            return "Sorry,I couldn't evaluate the expression.";
+        }
+    }
+    
+    bool found_response = false;
 	for(const auto& pair : responses){
 	   if(caseInsensitiveStringCompare(message, pair.first)){
 	       const std::vector<std::string>& possible_responses = pair.second;
 	       if(!possible_responses.empty()){
 	             int index = rand() % possible_responses.size();
 	            return possible_responses[index];   
-	       }else{
-	           return "I'm sorry, I don't have a response for that.";
 	       }
+	       found_response = true;
 	   }
+	}
+	
+	if(!found_response){
+	    std::vector<std::string>generic_responses = {
+	        "Can you elaborate more about your question?",
+	        "I'm not sure what you mean...Please make it clear",
+	        "I'm glad you asked,let's dive into it.",
+	        "Fascinating! Let's delve deeper into this topic"
+	    };
+	    int index = rand() % generic_responses.size();
+	    return generic_responses[index];
 	}
 	return "I'm sorry,I don't know what are you saying.";
 }
@@ -86,7 +171,7 @@ int main(){
 		std::cout << "You: ";
 		std::getline(std::cin, user_input);
 
-		if(user_input == "bye" || user_input == "Bye"){
+		if(user_input == "bye" || user_input == "Bye" || user_input == "さよなら"){
 			std::cout << "ChatBot: " << get_response(user_input) << std::endl;
 			break;
 		}else{
